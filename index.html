@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>phone screen</title>
+  </head>
+  <body>
+    <input type="text" id="input" />
+    <div class="parent">
+      <canvas id="camera-canvas"></canvas>
+      <div class="dot" id="dot"></div>
+    </div>
+
+    <button id="button-shoot">shoot</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.4.7/peerjs.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+  <style>
+    canvas {
+      width: 100%;
+    }
+
+    button {
+      width: 100px;
+      height: 50px;
+      padding: 100px;
+      background: burlywood;
+    }
+
+    .parent {
+      position: relative;
+    }
+
+    .dot {
+      position: absolute;
+      left: 0px;
+      top: 0px;
+      border-radius: 50%;
+      width: 10px;
+      background: red;
+    }
+  </style>
+</html>
