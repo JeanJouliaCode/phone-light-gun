@@ -86,7 +86,7 @@ function findObjectBasedOnColor(color) {
   }
   const avgX = sumX / count;
   const avgY = sumY / count;
-  if (count / countAgainst > 0.001) {
+  if (count / countAgainst > 0.0005) {
     return { x: avgX, y: avgY };
   } else {
     return null;
@@ -110,7 +110,7 @@ function filterCanvas() {
     let r = pixels[i];
     let g = pixels[i + 1];
     let b = pixels[i + 2];
-    if (r < 80 && g < 80 && b > 200) {
+    if (r > 200 && g < 100 && b < 100) {
       pixels[i] = 255;
       pixels[i + 1] = 255;
       pixels[i + 2] = 255;
@@ -161,21 +161,32 @@ async function playCamera(canvas) {
 playCamera(canvas, canvas.width, canvas.height);
 
 const shoot = document.getElementById("button-shoot");
-shoot.addEventListener("touchstart", () => {
+document.body.addEventListener("touchstart", () => {
+  sendPosition();
+});
+
+setInterval(() => {
+  sendPosition();
+}, 100);
+
+function sendPosition() {
   const redPosition = findObjectBasedOnColor("red"); //red
   const greenPosition = findObjectBasedOnColor("green"); //green
   const bluePosition = findObjectBasedOnColor("blue"); //blue
+  dotDraw = [];
+  if (redPosition) dotDraw.push(redPosition);
+  if (greenPosition) dotDraw.push(greenPosition);
+  if (bluePosition) dotDraw.push(bluePosition);
 
   if (redPosition && greenPosition && bluePosition) {
-    dotDraw = [redPosition, greenPosition, bluePosition];
-    console.log("found", greenPosition);
-
     if (!conn) {
       conn = peer.connect("jjeeaann2013");
     }
-    conn.send(getPositionScreen(redPosition, greenPosition, bluePosition));
+    const positon = getPositionScreen(redPosition, greenPosition, bluePosition);
+    console.log(positon);
+    conn.send(positon);
   }
-});
+}
 
 function getPositionScreen(redPosition, greenPosition, bluePosition) {
   const horizontalProjection = getProjectionPosition(
@@ -191,6 +202,8 @@ function getPositionScreen(redPosition, greenPosition, bluePosition) {
     x: (redPosition.x + greenPosition.x) / 2,
     y: (redPosition.y + greenPosition.y) / 2,
   };
+
+  dotDraw.push({ x: horizontalProjection.x, y: horizontalProjection.y });
 
   const verticalProjection = getProjectionPosition(
     centerGreenRed,
@@ -217,8 +230,12 @@ function getPositionScreen(redPosition, greenPosition, bluePosition) {
 
   dotDraw.push({ x: horizontalProjection.x, y: verticalProjection.y });
   return {
-    x: distancehorizontalProjectionRed / distanceRedGreen,
-    y: distanceverticalProjectionBlue / (distanceBlueCenter * 2),
+    x:
+      (distancehorizontalProjectionRed / distanceRedGreen) *
+      (horizontalProjection.x < redPosition.x ? -1 : 1),
+    y:
+      (distanceverticalProjectionBlue / (distanceBlueCenter * 2)) *
+      (verticalProjection.y > bluePosition.y ? -1 : 1),
   };
 }
 
@@ -255,16 +272,3 @@ function getProjectionPosition(point1, point2, point3) {
     y: point1.y + projectionScalar * vectorAB.y,
   });
 }
-
-function handleVolumeButtonPress(event) {
-  console.log(event.key);
-  const volumeButtonPressed =
-    event.key === "VolumeUp" || event.key === "VolumeDown";
-  if (volumeButtonPressed) {
-    // Volume button was pressed
-    console.log("Volume button pressed");
-  }
-}
-
-// Add event listener to capture keydown events
-document.addEventListener("keydown", handleVolumeButtonPress);
