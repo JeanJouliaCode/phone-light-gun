@@ -3,7 +3,7 @@ var peer = new Peer();
 const button = document.getElementById("button");
 const input = document.getElementById("input");
 let conn = null;
-let dotDraw = [];
+let dotToDraw = [];
 
 peer.on("open", function (id) {
   console.log("My peer ID is: " + id);
@@ -48,49 +48,54 @@ function rgb2hsv(r, g, b) {
   };
 }
 
-function findObjectBasedOnColor(color) {
+function findEveragePositionGreen(
+  searchArea = { x: 0, y: 0, width: canvas.width, height: canvas.height }
+) {
   let sumX = 0;
   let sumY = 0;
-  let count = 0;
-  let countAgainst = 0;
+  let countGreen = 0;
+  let countAll = 0;
   const ctx = canvas.getContext("2d");
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const pixels = imageData.data;
-  for (let i = 0; i < pixels.length; i += 4) {
-    let r = pixels[i];
-    let g = pixels[i + 1];
-    let b = pixels[i + 2];
 
-    const tolerance = 30;
-    let flag = false;
-    switch (color) {
-      case "green":
-        if (r < 80 && g > 200 && b < 80) flag = true;
-        break;
-      case "red":
-        if (r > 200 && g < 100 && b < 100) flag = true;
-        break;
-      case "blue":
-        if (r < 80 && g < 80 && b > 200) flag = true;
-        break;
-    }
+  const skipFactop = 1;
 
-    if (flag) {
-      const x = (i / 4) % canvas.width;
-      const y = Math.floor(i / (4 * canvas.width));
-      sumX += x;
-      sumY += y;
-      count++;
+  for (let x = searchArea.x; x < searchArea.width; x += skipFactop) {
+    for (let y = searchArea.y; y < searchArea.height; y += skipFactop) {
+      if (x > searchArea.width || y > searchArea.height) continue;
+
+      const { r, g, b, i } = getPixelRGB(x, y, pixels, canvas);
+      if (r < 80 && g > 200 && b < 80) {
+        sumX += x;
+        sumY += y;
+        countGreen++;
+      }
+      countAll++;
     }
-    countAgainst++;
   }
-  const avgX = sumX / count;
-  const avgY = sumY / count;
-  if (count / countAgainst > 0.0005) {
+
+  const avgX = sumX / countGreen;
+  const avgY = sumY / countGreen;
+
+  const threshold = 0.0005;
+  if (countGreen / countAll > threshold) {
     return { x: avgX, y: avgY };
   } else {
     return null;
   }
+}
+
+function getPixelRGB(x, y, pixelData, canv) {
+  // Calculate the index of the pixel in the pixelData array
+  const index = (y * canv.width + x) * 4;
+
+  // Extract the RGB values from the pixelData array
+  const red = pixelData[index];
+  const green = pixelData[index + 1];
+  const blue = pixelData[index + 2];
+
+  return { r: red, g: green, b: blue, i: index };
 }
 
 function drawDot(x, y, color, radius, canvas) {
@@ -131,7 +136,7 @@ function playStream(canvas, stream) {
       context.drawImage(video, 0, 0);
       //filterCanvas();
       window.requestAnimationFrame(drawFrame);
-      dotDraw.forEach((dot) => {
+      dotToDraw.forEach((dot) => {
         drawDot(dot.x, dot.y, "yellow", 10, canvas);
       });
     };
@@ -147,6 +152,8 @@ async function playCamera(canvas) {
   var devices = navigator.mediaDevices;
   if (devices && "getUserMedia" in devices) {
     var constraints = {
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
       video: {
         facingMode: "environment",
       },
@@ -167,76 +174,81 @@ document.body.addEventListener("touchstart", () => {
 
 setInterval(() => {
   sendPosition();
-}, 100);
+}, 200);
 
 function sendPosition() {
-  const redPosition = findObjectBasedOnColor("red"); //red
-  const greenPosition = findObjectBasedOnColor("green"); //green
-  const bluePosition = findObjectBasedOnColor("blue"); //blue
-  dotDraw = [];
-  if (redPosition) dotDraw.push(redPosition);
-  if (greenPosition) dotDraw.push(greenPosition);
-  if (bluePosition) dotDraw.push(bluePosition);
+  const position = getPositionScreen();
 
-  if (redPosition && greenPosition && bluePosition) {
+  if (position) {
     if (!conn) {
       conn = peer.connect("jjeeaann2013");
     }
-    const positon = getPositionScreen(redPosition, greenPosition, bluePosition);
-    console.log(positon);
-    conn.send(positon);
+
+    console.log(position);
+    conn.send(position);
   }
 }
 
-function getPositionScreen(redPosition, greenPosition, bluePosition) {
-  const horizontalProjection = getProjectionPosition(
-    redPosition,
-    greenPosition,
-    {
-      x: canvas.width / 2,
-      y: canvas.height / 2,
-    }
+function getPositionScreen() {
+  // first get the average green positon on the screen to draw a line
+  const greenPosition = findEveragePositionGreen();
+  const leftGreenPosition = greenPosition
+    ? findEveragePositionGreen({
+        x: 0,
+        y: 0,
+        width: Math.floor(greenPosition.x),
+        height: canvas.height,
+      })
+    : null;
+  const rightGreenPosition = greenPosition
+    ? findEveragePositionGreen({
+        x: Math.floor(greenPosition.x),
+        y: 0,
+        width: canvas.width,
+        height: canvas.height,
+      })
+    : null;
+
+  const distanceLeftToRight = distanceBetweenPoints(
+    leftGreenPosition,
+    rightGreenPosition
   );
 
-  const centerGreenRed = {
-    x: (redPosition.x + greenPosition.x) / 2,
-    y: (redPosition.y + greenPosition.y) / 2,
-  };
-
-  dotDraw.push({ x: horizontalProjection.x, y: horizontalProjection.y });
-
-  const verticalProjection = getProjectionPosition(
-    centerGreenRed,
-    bluePosition,
-    {
-      x: canvas.width / 2,
-      y: canvas.height / 2,
-    }
+  const projectionCenterScreenOnLeftRight = getProjectionPosition(
+    leftGreenPosition,
+    rightGreenPosition,
+    { x: canvas.width / 2, y: canvas.height / 2 }
   );
 
-  const distanceRedGreen = distanceBetweenPoints(redPosition, greenPosition);
-  const distancehorizontalProjectionRed = distanceBetweenPoints(
-    horizontalProjection,
-    redPosition
-  );
-  const distanceBlueCenter = distanceBetweenPoints(
-    bluePosition,
-    centerGreenRed
-  );
-  const distanceverticalProjectionBlue = distanceBetweenPoints(
-    verticalProjection,
-    bluePosition
+  const distanceLeftToProjection = distanceBetweenPoints(
+    leftGreenPosition,
+    projectionCenterScreenOnLeftRight
   );
 
-  dotDraw.push({ x: horizontalProjection.x, y: verticalProjection.y });
+  const distanceCenterToProjection = distanceBetweenPoints(
+    { x: canvas.width / 2, y: canvas.height / 2 },
+    projectionCenterScreenOnLeftRight
+  );
+
+  dotToDraw = [{ x: canvas.width / 2, y: canvas.height / 2 }];
   return {
-    x:
-      (distancehorizontalProjectionRed / distanceRedGreen) *
-      (horizontalProjection.x < redPosition.x ? -1 : 1),
+    x: distanceLeftToProjection / distanceLeftToRight,
     y:
-      (distanceverticalProjectionBlue / (distanceBlueCenter * 2)) *
-      (verticalProjection.y > bluePosition.y ? -1 : 1),
+      (distanceCenterToProjection / distanceLeftToRight) *
+      -pointSide(
+        { x: canvas.width / 2, y: canvas.height / 2 },
+        leftGreenPosition,
+        rightGreenPosition
+      ),
   };
+}
+
+function pointSide(point, lineStart, lineEnd) {
+  const crossProduct =
+    (lineEnd.x - lineStart.x) * (point.y - lineStart.y) -
+    (lineEnd.y - lineStart.y) * (point.x - lineStart.x);
+
+  return crossProduct > 0 ? 1 : -1;
 }
 
 function distanceBetweenPoints(point1, point2) {
