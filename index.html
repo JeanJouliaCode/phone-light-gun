@@ -1,35 +1,82 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>phone screen</title>
+    <title>phone light gun</title>
   </head>
   <body>
-    <input type="text" id="input" />
-    <div class="parent">
-      <canvas id="camera-canvas"></canvas>
-      <div class="dot" id="dot"></div>
+    <div id="main">
+      <button id="button-shoot" class="button-shoot">Shoot</button>
+      <button id="button-calibrate" class="button-calibrate">Calibrate</button>
     </div>
-
-    <button id="button-shoot">shoot</button>
+    <div id="calibrate">
+      <canvas id="filter-canvas"></canvas>
+      <button id="button-filter" class="button-filter">Filter</button>
+      <button id="button-done" class="button-done">Done</button>
+    </div>
+    <canvas id="camera-canvas"></canvas>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.4.7/peerjs.min.js"></script>
     <script src="script.js"></script>
   </body>
   <style>
-    canvas {
-      width: 100%;
-      max-width: 100vh;
+    #camera-canvas {
+      position: absolute;
+      right: 0vw;
+    }
+
+    #calibrate {
+      display: none;
+    }
+
+    body {
+      padding: 20px;
+      background: #393e41;
     }
 
     button {
-      width: 100px;
-      height: 50px;
-      padding: 100px;
-      background: burlywood;
+      font-size: 120px;
+      padding: 10px;
+      color: black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50px;
+    }
+
+    .button-shoot {
+      width: 100%;
+      height: 50vh;
+      background: #e94f37;
+    }
+
+    .button-calibrate {
+      margin-top: 20px;
+      width: 100%;
+      background-color: #3f88c5;
+    }
+
+    .button-filter {
+      margin-top: 20px;
+      width: 100%;
+      background: #e94f37;
+    }
+
+    .button-done {
+      margin-top: 20px;
+      width: 100%;
+      background: #3f88c5;
+    }
+
+    canvas {
+      width: 100%;
+      max-width: 100vw;
+      background: #3f88c5;
     }
 
     .parent {
       position: relative;
+      display: flex;
+      flex-direction: column;
     }
 
     .dot {
