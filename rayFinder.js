@@ -289,6 +289,8 @@ setInterval(() => {
 
 const audio = new Audio('bulletSound.mp3');
 
+const userId = Math.random().toString(36).substring(7);
+
 document.getElementById('button-shoot').addEventListener('touchstart', () => {
     const position = finder.getPositionInScreen();
 
@@ -307,6 +309,6 @@ document.getElementById('button-shoot').addEventListener('touchstart', () => {
         }
 
         console.log(position);
-        connectionPeer.send(position);
+        connectionPeer.send({ position, userId });
     }
 });
