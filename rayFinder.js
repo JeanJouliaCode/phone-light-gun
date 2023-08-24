@@ -298,7 +298,12 @@ document.getElementById('button-shoot').addEventListener('touchstart', () => {
         audio.play();
 
         if (!connectionPeer) {
-            connectionPeer = peer.connect('jjeeaann2013');
+            if (window.location.search) {
+                const id = new URLSearchParams(window.location.search).get('id');
+                connectionPeer = peer.connect(id);
+            } else {
+                connectionPeer = peer.connect('jjeeaann2013');
+            }
         }
 
         console.log(position);
