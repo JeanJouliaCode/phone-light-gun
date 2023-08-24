@@ -295,7 +295,7 @@ document.getElementById('button-shoot').addEventListener('touchstart', () => {
     if (position) {
         navigator.vibrate(100);
         audio.currentTime = 0; // Reset to the beginning
-        audio.play();
+        //audio.play();
 
         if (!connectionPeer) {
             if (window.location.search) {
